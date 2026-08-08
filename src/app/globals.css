@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/**
+ * CrossFriend brand tokens.
+ *
+ * Same palette as the customer storefront so a baker recognises they are inside CrossFriend, with
+ * the same discipline about what each colour means:
+ *
+ *   cf-orange  primary commit actions only (Publish, Create product, Sign in)
+ *   cf-purple  CrossFriend/AI Studio identity — accents, links, active state
+ *   emerald / amber / red  semantic state, never decoration
+ *
+ * Kept deliberately quiet otherwise. This is a working tool a baker opens on their phone between
+ * orders, not a marketing surface — the interesting colour should be their product photos.
+ */
+@theme {
+  --color-cf-orange: #ff6b35;
+  --color-cf-orange-dark: #e55a25;
+  --color-cf-purple: #7b2ff7;
+  --color-cf-purple-50: #f6f1ff;
+  --color-cf-purple-100: #ede3ff;
+  --color-cf-purple-200: #dcc9ff;
+  --color-cf-purple-700: #6620d6;
+  --color-cf-pink: #ff2d87;
+  --color-cf-yellow: #ffd166;
+  --color-cf-warm: #fff7f0;
+  --color-cf-warm-dark: #ffeedd;
+
+  --radius-rounded: 8px;
+  --radius-large: 16px;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #1f2937;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* The portal is used one-handed on a phone in a kitchen as often as on a desk — never let a
+   tap target fall below the accessible minimum. */
+button,
+[role="button"],
+a.tap-target {
+  min-height: 44px;
+}
