@@ -6,6 +6,8 @@ interface PresignedUpload {
   url: string
   fields: Record<string, string>
   publicUrl: string
+  /** The exact S3 key the policy pins. Needed when recording a bakery photo against the profile. */
+  key: string
   maxBytes: number
 }
 
@@ -27,10 +29,11 @@ export interface SignResult {
  */
 export async function signUploadAction(
   contentType: string,
-  sizeBytes: number
+  sizeBytes: number,
+  purpose: "product" | "profile" | "banner" = "product"
 ): Promise<SignResult> {
   const result = await api.post<PresignedUpload>("/baker/uploads", {
-    purpose: "product",
+    purpose,
     contentType,
     sizeBytes,
   })

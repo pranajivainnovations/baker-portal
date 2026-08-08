@@ -13,6 +13,27 @@ interface CategoriesResponse {
 }
 
 /**
+ * Lead-time bands, in the words a baker would use.
+ *
+ * The value is the UPPER bound of each band in hours, which is what gets stored — a band promises
+ * "ready within this", so quoting the ceiling is the honest reading and never over-promises.
+ * "Immediate" is 0, and the empty string means the baker did not say.
+ */
+const PREP_TIME_OPTIONS = [
+  { label: "Not specified", value: "" },
+  { label: "Immediate — ready now", value: "0" },
+  { label: "Within 4 hours", value: "4" },
+  { label: "4 – 8 hours", value: "8" },
+  { label: "8 – 12 hours", value: "12" },
+  { label: "Same day (within 24 hours)", value: "24" },
+  { label: "1 – 2 days", value: "48" },
+  { label: "2 – 3 days", value: "72" },
+  { label: "3 – 5 days", value: "120" },
+  { label: "Up to a week", value: "168" },
+  { label: "More than a week", value: "336" },
+] as const
+
+/**
  * The baker's product form.
  *
  * Four things are required — name, category, one size with a price, and nothing else. Everything a
@@ -123,27 +144,32 @@ export default async function NewProductPage({
           />
         </div>
 
-        <PhotoField initialUrl={one("imageUrl") || undefined} />
+        <PhotoField initialUrls={many("imageUrl")} />
 
         <div>
           <label htmlFor="prepHours" className="block text-sm font-semibold text-slate-700">
-            How long do you need? <span className="font-normal text-slate-400">(optional)</span>
+            How long do you need to deliver it or prepare it?{" "}
+            <span className="font-normal text-slate-400">(optional)</span>
           </label>
-          <div className="mt-1.5 flex items-center gap-2">
-            <input
-              id="prepHours"
-              name="prepHours"
-              type="number"
-              min="0"
-              max="720"
-              step="1"
-              inputMode="numeric"
-              defaultValue={one("prepHours")}
-              placeholder="24"
-              className="w-28 rounded-rounded border border-slate-300 px-3 py-2.5 text-base text-slate-900 placeholder:text-slate-300 focus:border-cf-purple focus:outline-none"
-            />
-            <span className="text-sm text-slate-500">hours</span>
-          </div>
+          {/* A free-number field asked bakers to convert "about half a day" into hours, which is
+              work they should not have to do and which produced values nobody could compare. These
+              bands are how a baker actually thinks about lead time, and they map to the same
+              prep_hours the backend already validates. */}
+          <select
+            id="prepHours"
+            name="prepHours"
+            defaultValue={one("prepHours")}
+            className="mt-1.5 w-full rounded-rounded border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 focus:border-cf-purple focus:outline-none"
+          >
+            {PREP_TIME_OPTIONS.map((o) => (
+              <option key={o.label} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-xs text-slate-400">
+            Customers see this on the product, so they know when to expect it.
+          </p>
         </div>
 
         <div className="flex flex-col gap-3 pt-2 sm:flex-row-reverse">

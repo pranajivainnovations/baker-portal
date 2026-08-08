@@ -102,6 +102,15 @@ export interface BakerMe {
     pincode: string | null
     bio: string | null
     profilePhotoUrl: string | null
+    bannerUrl: string | null
+    contactPerson: string | null
+    phone: string | null
+    whatsappNumber: string | null
+    email: string | null
+    address: string | null
+    websiteUrl: string | null
+    avgTurnaroundHours: number | null
+    specialtyTags: string[]
     isPublic: boolean
     blueTick: boolean
     trustBadge: boolean
