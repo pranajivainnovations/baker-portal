@@ -12,6 +12,27 @@ interface CategoriesResponse {
   categories: { id: string; label: string }[]
 }
 
+interface ProductTypesResponse {
+  types: { value: string; label: string; emoji: string | null }[]
+}
+
+/**
+ * Common allergens, offered as checkboxes.
+ *
+ * A free-text ingredients box produces "chocolate, cream, love" — fine prose, useless for a
+ * customer scanning for nuts. This is a food marketplace in India, where allergen disclosure is an
+ * FSSAI obligation, so the common ones are pickable and the free-text field is for everything else.
+ */
+const ALLERGENS = [
+  "Milk / dairy",
+  "Eggs",
+  "Nuts",
+  "Peanuts",
+  "Wheat / gluten",
+  "Soy",
+  "Sesame",
+] as const
+
 /**
  * Lead-time bands, in the words a baker would use.
  *
@@ -56,8 +77,14 @@ export default async function NewProductPage({
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]![0] : (sp[k] as string)) ?? ""
   const many = (k: string) => (Array.isArray(sp[k]) ? (sp[k] as string[]) : sp[k] ? [sp[k] as string] : [])
 
-  const cats = await api.get<CategoriesResponse>("/baker/categories")
+  // Both drive required selects, and neither depends on the other, so there is no reason for the
+  // round trips to a database on another cloud to happen one after the other.
+  const [cats, types] = await Promise.all([
+    api.get<CategoriesResponse>("/baker/categories"),
+    api.get<ProductTypesResponse>("/baker/product-types"),
+  ])
   const categories = cats.data?.categories ?? []
+  const productTypes = types.data?.types ?? []
 
   const labels = many("sizeLabel")
   const prices = many("sizePrice")
@@ -122,6 +149,36 @@ export default async function NewProductPage({
           </select>
         </div>
 
+        <div>
+          <label htmlFor="typeValue" className="block text-sm font-semibold text-slate-700">
+            What kind of product is this?
+          </label>
+          {/* Separate from Category on purpose, and the two are not interchangeable: Category is
+              the marketplace shelf a customer browses, while this decides which occasion pages the
+              product appears on (Birthday, Diwali…) and what /store?type= finds. Every product
+              created before this field existed has no type and is invisible to both. */}
+          <select
+            id="typeValue"
+            name="typeValue"
+            required
+            defaultValue={one("typeValue")}
+            className="mt-1.5 w-full rounded-rounded border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 focus:border-cf-purple focus:outline-none"
+          >
+            <option value="" disabled>
+              Choose one
+            </option>
+            {productTypes.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.emoji ? `${t.emoji} ` : ""}
+                {t.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-xs text-slate-400">
+            This decides where your product shows up — birthday pages, festival pages, and so on.
+          </p>
+        </div>
+
         <fieldset>
           <legend className="text-sm font-semibold text-slate-700">Sizes and prices</legend>
           <p className="mt-0.5 text-xs text-slate-400">
@@ -171,6 +228,99 @@ export default async function NewProductPage({
             Customers see this on the product, so they know when to expect it.
           </p>
         </div>
+
+        {/* Required to PUBLISH, not to save — a baker can save a draft and come back. The backend
+            enforces the same rule, so this is the explanation, not the control. */}
+        <fieldset className="rounded-large border border-amber-200 bg-amber-50/60 p-4">
+          <legend className="px-1 text-sm font-semibold text-slate-800">
+            What&apos;s in it?
+          </legend>
+          <p className="mt-0.5 text-xs text-slate-600">
+            Needed before you can publish. Customers with allergies rely on this.
+          </p>
+
+          <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
+            {ALLERGENS.map((a) => (
+              <label key={a} className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  name="contains"
+                  value={a}
+                  defaultChecked={many("contains").includes(a)}
+                  className="h-4 w-4 rounded border-slate-300 text-cf-purple focus:ring-cf-purple"
+                />
+                {a}
+              </label>
+            ))}
+          </div>
+
+          <label htmlFor="containsOther" className="mt-3 block text-xs font-semibold text-slate-700">
+            Anything else <span className="font-normal text-slate-500">(comma separated)</span>
+          </label>
+          <input
+            id="containsOther"
+            name="containsOther"
+            defaultValue={one("containsOther")}
+            placeholder="dark chocolate, fresh cream, vanilla"
+            className="mt-1 w-full rounded-rounded border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-300 focus:border-cf-purple focus:outline-none"
+          />
+          <label className="mt-3 flex items-start gap-2 text-xs text-slate-700">
+            <input
+              type="checkbox"
+              name="contains"
+              value="No common allergens"
+              defaultChecked={many("contains").includes("No common allergens")}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-cf-purple focus:ring-cf-purple"
+            />
+            {/* Without this, "no allergens" and "hasn't filled it in yet" look identical to the
+                publish gate, and a baker with a genuinely allergen-free product would be stuck. */}
+            None of the above — this contains no common allergens
+          </label>
+        </fieldset>
+
+        <details className="rounded-large border border-slate-200 bg-white p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+            Help it sell <span className="font-normal text-slate-400">(optional)</span>
+          </summary>
+          <p className="mt-1 text-xs text-slate-400">
+            Listings with these details get more orders.
+          </p>
+
+          <label htmlFor="whoIsItFor" className="mt-3 block text-xs font-semibold text-slate-700">
+            Who is it for? <span className="font-normal text-slate-400">(comma separated)</span>
+          </label>
+          <input
+            id="whoIsItFor"
+            name="whoIsItFor"
+            defaultValue={one("whoIsItFor")}
+            placeholder="birthdays, office parties, kids"
+            className="mt-1 w-full rounded-rounded border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-300 focus:border-cf-purple focus:outline-none"
+          />
+
+          <label htmlFor="highlights" className="mt-3 block text-xs font-semibold text-slate-700">
+            What makes it special?{" "}
+            <span className="font-normal text-slate-400">(comma separated)</span>
+          </label>
+          <input
+            id="highlights"
+            name="highlights"
+            defaultValue={one("highlights")}
+            placeholder="eggless option, real Belgian chocolate, made fresh daily"
+            className="mt-1 w-full rounded-rounded border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-300 focus:border-cf-purple focus:outline-none"
+          />
+
+          <label htmlFor="careNote" className="mt-3 block text-xs font-semibold text-slate-700">
+            How should they keep it?
+          </label>
+          <input
+            id="careNote"
+            name="careNote"
+            maxLength={500}
+            defaultValue={one("careNote")}
+            placeholder="Refrigerate and eat within 2 days."
+            className="mt-1 w-full rounded-rounded border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-300 focus:border-cf-purple focus:outline-none"
+          />
+        </details>
 
         <div className="flex flex-col gap-3 pt-2 sm:flex-row-reverse">
           <button
