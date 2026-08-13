@@ -24,10 +24,16 @@ function StateControls({ id, state }: { id: string; state: BakerProduct["state"]
           ? [{ label: "Publish", next: "published", primary: true }]
           : []
 
-  if (actions.length === 0) return null
-
   return (
-    <div className="flex gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
+      {/* Always offered, in every state — a wrong price on a live listing is the most urgent thing
+          a baker can need to fix, and it is exactly the case where the row has no other action. */}
+      <Link
+        href={`/products/${id}/edit`}
+        className="rounded-rounded border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-400"
+      >
+        Edit
+      </Link>
       {actions.map((a) => (
         <form key={a.next} action={setProductStateAction}>
           <input type="hidden" name="productId" value={id} />
@@ -72,9 +78,23 @@ const STATE_LABEL: Record<BakerProduct["state"], { text: string; className: stri
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ created?: string; state?: string; error?: string }>
+  searchParams: Promise<{
+    created?: string
+    updated?: string
+    deleted?: string
+    state?: string
+    error?: string
+    warning?: string
+  }>
 }) {
-  const { created, state: changedTo, error: stateError } = await searchParams
+  const {
+    created,
+    updated,
+    deleted,
+    state: changedTo,
+    error: stateError,
+    warning,
+  } = await searchParams
   const result = await api.get<{ products: BakerProduct[] }>("/baker/products")
   const products = result.data?.products ?? []
 
@@ -98,6 +118,28 @@ export default async function ProductsPage({
           <p className="mt-0.5 text-sm text-emerald-700">
             It&apos;s a draft for now — publishing comes next, and then customers can order it.
           </p>
+        </div>
+      )}
+
+      {updated && (
+        <div className="mb-5 rounded-large border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <p className="text-sm font-semibold text-emerald-800">Changes saved.</p>
+        </div>
+      )}
+
+      {deleted && (
+        <div className="mb-5 rounded-large border border-slate-200 bg-slate-50 px-4 py-3">
+          <p className="text-sm font-semibold text-slate-800">Deleted.</p>
+        </div>
+      )}
+
+      {/* An edit that leaves a live listing incomplete takes it off sale rather than being refused,
+          so this is not a nicety — without it a baker walks away believing their cake is still
+          selling. Amber rather than red: the edit did save, and nothing is broken. */}
+      {warning && (
+        <div className="mb-5 rounded-large border border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-semibold text-amber-900">Saved, but taken off sale</p>
+          <p className="mt-0.5 text-sm text-amber-800">{warning}</p>
         </div>
       )}
 

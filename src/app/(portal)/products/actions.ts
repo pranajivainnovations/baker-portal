@@ -122,3 +122,94 @@ export async function createProductAction(formData: FormData) {
   revalidatePath("/dashboard")
   redirect("/products?created=1")
 }
+
+/**
+ * Save changes to an existing product.
+ *
+ * Sends every field the form holds, not only what changed — the form always renders the whole
+ * listing, so what it submits IS the intended state. Diffing here would mean guessing which blank
+ * field is "cleared" and which is "untouched", and getting that wrong silently loses a baker's data.
+ *
+ * The one thing not sent is the handle. Renaming a cake must not break a URL a customer has already
+ * been given, so the backend leaves it alone and this never offers to change it.
+ */
+export async function updateProductAction(productId: string, formData: FormData) {
+  const name = String(formData.get("name") || "").trim()
+  const categoryId = String(formData.get("categoryId") || "")
+  const typeValue = String(formData.get("typeValue") || "")
+  const description = String(formData.get("description") || "").trim()
+  const prepHoursRaw = String(formData.get("prepHours") || "").trim()
+
+  const allergenBoxes = formData.getAll("contains").map((v) => String(v).trim()).filter(Boolean)
+  const containsOther = String(formData.get("containsOther") || "").trim()
+  const contains = [
+    ...allergenBoxes,
+    ...containsOther.split(",").map((s) => s.trim()).filter(Boolean),
+  ]
+
+  const whoIsItForRaw = String(formData.get("whoIsItFor") || "").trim()
+  const highlightsRaw = String(formData.get("highlights") || "").trim()
+  const careNote = String(formData.get("careNote") || "").trim()
+
+  const imageUrls = formData
+    .getAll("imageUrl")
+    .map((v) => String(v).trim())
+    .filter(Boolean)
+
+  const labels = formData.getAll("size-label").map((v) => String(v).trim())
+  const prices = formData.getAll("size-price").map((v) => String(v).trim())
+  const sizes = labels
+    .map((label, i) => ({ label, price: Number(prices[i]) }))
+    .filter((s) => s.label !== "")
+
+  const result = await api.patch<{
+    product: { productId: string; publicationState: string; unpublishedBecause?: string }
+  }>(`/baker/products/${productId}`, {
+    name,
+    categoryId,
+    typeValue,
+    description,
+    imageUrls,
+    prepHours: prepHoursRaw ? Number(prepHoursRaw) : undefined,
+    sizes,
+    contains,
+    whoIsItFor: whoIsItForRaw ? [whoIsItForRaw] : [],
+    highlights: highlightsRaw ? [highlightsRaw] : [],
+    careNote,
+  })
+
+  if (!result.data) {
+    redirect(
+      `/products/${productId}/edit?error=${encodeURIComponent(result.error ?? "Couldn't save your changes.")}`
+    )
+  }
+
+  revalidatePath("/products")
+  revalidatePath("/dashboard")
+
+  // An edit can leave a live listing incomplete — no photo, no price — in which case the backend
+  // moves it back to draft rather than refusing the edit. That has to be said plainly, or a baker
+  // walks away believing their cake is still on sale.
+  const note = result.data.product.unpublishedBecause
+  redirect(note ? `/products?warning=${encodeURIComponent(note)}` : "/products?updated=1")
+}
+
+/**
+ * Delete a product for good.
+ *
+ * The backend refuses if it has ever been ordered, and says so in words a baker can act on
+ * ("Archive it instead"). That refusal is surfaced as-is rather than being reworded here.
+ */
+export async function deleteProductAction(formData: FormData) {
+  const productId = String(formData.get("productId") || "")
+
+  const result = await api.del(`/baker/products/${productId}`)
+
+  revalidatePath("/products")
+  revalidatePath("/dashboard")
+
+  if (result.error) {
+    redirect(`/products?error=${encodeURIComponent(result.error)}`)
+  }
+  redirect("/products?deleted=1")
+}
