@@ -8,6 +8,9 @@ import { logoutAction } from "@/app/login/actions"
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
+  // Second, not last. An unaccepted order is the only thing in this portal with a clock running, so
+  // it sits within the same thumb-reach as the dashboard rather than at the end of the row.
+  { href: "/orders", label: "Orders" },
   { href: "/products", label: "My products" },
   { href: "/profile", label: "Bakery profile" },
 ]
