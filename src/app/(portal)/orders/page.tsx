@@ -50,6 +50,14 @@ const STATUS: Record<Status, { label: string; chip: string }> = {
  * an error is worse than no button, so this shows exactly what will be accepted. "Accepted" offers
  * Ready as well as Baking, because a baker who already had it made should not have to click through
  * a step that never happened.
+ *
+ * ── Why a bakery's job ends at Ready ───────────────────────────────────────────────────────────
+ * CrossFriend owns delivery. The bakery makes the cake and says when it is ready; getting it to the
+ * customer, and recording that it arrived, is ours. So Ready is the last primary action on this
+ * screen — "Handed over" is still here, because a bakery that hands a cake straight to a customer
+ * should be able to say so, but it is a secondary button and CrossFriend confirms delivery either
+ * way. Leaving it as the prominent last step told bakeries they were responsible for something they
+ * are not, and left our referral payouts waiting on somebody else's habits.
  */
 const MOVES: Record<Status, { label: string; next: Status; primary?: boolean }[]> = {
   new: [
@@ -61,7 +69,7 @@ const MOVES: Record<Status, { label: string; next: Status; primary?: boolean }[]
     { label: "It's ready", next: "ready" },
   ],
   baking: [{ label: "It's ready", next: "ready", primary: true }],
-  ready: [{ label: "Handed over", next: "delivered", primary: true }],
+  ready: [{ label: "Handed it over myself", next: "delivered" }],
   delivered: [],
   rejected: [],
 }
@@ -182,6 +190,20 @@ export default async function OrdersPage({
                   <p className="text-sm font-bold text-slate-900">
                     Your total: {inr(o.bakerTotal)}
                   </p>
+                  {/**
+                    * Said on a Ready order, because the absence of a big orange button is otherwise
+                    * indistinguishable from the app being stuck. A bakery that has finished should
+                    * know it has finished — and should not be waiting to tap something, or wondering
+                    * whether their payment depends on it.
+                    */}
+                  {o.status === "ready" && (
+                    <p className="w-full rounded-rounded bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                      <strong className="font-semibold text-slate-800">You&rsquo;re done with this one.</strong>{" "}
+                      CrossFriend collects it and confirms delivery. Only mark it handed over if you
+                      gave it to the customer yourself.
+                    </p>
+                  )}
+
                   {moves.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {moves.map((m) => (

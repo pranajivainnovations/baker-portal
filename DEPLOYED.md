@@ -33,3 +33,19 @@ Do not edit by hand, and do not delete — it is the only record of what is live
 - image:   crossfriend-baker-portal:latest
 - target:  ubuntu@13.62.195.167:/home/ubuntu/crossfriend-baker-portal
 - by:      crossfriend2025
+---
+- when:    2026-09-07 16:43:09 UTC  /  2026-09-07 22:13 IST
+- outcome: SUCCESS
+- commit:  3e5d4e4 (main)
+- tree:    clean
+- image:   crossfriend-baker-portal:latest
+- target:  ubuntu@13.62.195.167:/home/ubuntu/crossfriend-baker-portal
+- by:      crossfriend2025
+---
+- when:    2026-09-15 09:10:22 UTC  /  2026-09-15 14:40 IST
+- outcome: SUCCESS
+- commit:  3e5d4e4 (main)
+- tree:    dirty
+- image:   crossfriend-baker-portal:latest
+- target:  ubuntu@13.62.195.167:/home/ubuntu/crossfriend-baker-portal
+- by:      crossfriend2025
