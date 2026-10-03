@@ -14,6 +14,34 @@ interface OrderItem {
   thumbnail: string | null
   quantity: number
   unitPrice: number
+  /** What the customer chose. Present on orders from the current pipeline. */
+  spec?: Record<string, unknown> | null
+}
+
+/**
+ * The parts of an item's spec a baker actually needs, in the order they need them.
+ *
+ * ── Why this is a list and not the whole object ────────────────────────────────────────────────
+ * A spec carries everything the checkout knew — pincode, the baker it was assigned to, internal
+ * flags, the frozen title and thumbnail. Printing all of it would bury the two lines that decide
+ * what somebody makes on which day. These are the fields worth a baker's attention, named in the
+ * words they use rather than the keys we store them under.
+ */
+const SPEC_FIELDS: { key: string; label: string }[] = [
+  { key: "delivery_date", label: "Needed" },
+  { key: "delivery_time_slot", label: "Slot" },
+  { key: "weight", label: "Weight" },
+  { key: "flavor", label: "Flavour" },
+  { key: "message", label: "On the cake" },
+]
+
+function specLines(spec: Record<string, unknown> | null | undefined) {
+  if (!spec) return []
+  return SPEC_FIELDS.map(({ key, label }) => {
+    const value = spec[key]
+    if (value === null || value === undefined || value === "") return null
+    return { label, value: String(value) }
+  }).filter((x): x is { label: string; value: string } => x !== null)
 }
 
 interface BakerOrder {
@@ -181,6 +209,18 @@ export default async function OrdersPage({
                         <p className="text-xs text-slate-500">
                           {i.quantity} × {inr(i.unitPrice)}
                         </p>
+                        {/* What to make, and by when. Nothing is shown when there is nothing to
+                            say, so a plain catalogue item stays a single tidy line. */}
+                        {specLines(i.spec).length > 0 && (
+                          <dl className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                            {specLines(i.spec).map((d) => (
+                              <div key={d.label} className="flex gap-1 text-xs">
+                                <dt className="text-slate-400">{d.label}</dt>
+                                <dd className="font-medium text-slate-700">{d.value}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        )}
                       </div>
                     </li>
                   ))}
